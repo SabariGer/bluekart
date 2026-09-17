@@ -6,7 +6,7 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string, fallback?: string) => string;
-  formatPrice: (amount: number) => string;
+  formatPrice: (amount?: number | null) => string;
 }
 
 const translations: Record<Language, Record<string, string>> = {
@@ -30,6 +30,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.adminMode': 'Store Administrator',
     'nav.welcome': 'Welcome back',
     'nav.quickAccess': 'Quick Test Login',
+    'nav.allProducts': 'All Products',
+
+    // Announcement Bar
+    'announcement.freeShipping': 'Free express delivery on orders over $50',
+    'announcement.promoCode': 'Use code BLUE20 for 20% off',
+    'announcement.stripeSecurity': 'Stripe 256-Bit Encrypted Payments',
+    'announcement.trackOrders': 'Track orders live with real-time carrier updates',
 
     // Hero & Slideshow
     'slideshow.title': 'Featured Collections & German Craftsmanship',
@@ -37,6 +44,7 @@ const translations: Record<Language, Record<string, string>> = {
     'slideshow.viewDeal': 'View Deal',
     'slideshow.freeShipping': 'Free Express Delivery Available',
     'slideshow.limitedOffer': 'Limited Time Offer',
+    'slideshow.stripeSecurity': 'Stripe Verified Payment Guarantee',
 
     // Flash Sale
     'flash.title': 'Flash Sale • Blitzangebote',
@@ -55,6 +63,14 @@ const translations: Record<Language, Record<string, string>> = {
     'categories.all': 'All Products',
     'categories.germanOrigin': 'Made in Germany',
     'categories.filterBy': 'Filter by Department',
+    'category.shopBy': 'Shop by Department',
+    'category.all': 'All Products',
+    'category.clearFilter': 'Clear filter',
+    'category.sort': 'Sort by',
+    'category.sortFeatured': 'Featured',
+    'category.sortPriceLow': 'Price: Low to High',
+    'category.sortPriceHigh': 'Price: High to Low',
+    'category.sortRating': 'Highest Rated',
 
     // Product Card & Listing
     'product.addToCart': 'Add to Cart',
@@ -62,6 +78,8 @@ const translations: Record<Language, Record<string, string>> = {
     'product.quickView': 'Quick View',
     'product.inStock': 'In Stock',
     'product.lowStock': 'Only {count} left',
+    'product.onlyLeft': 'Only left:',
+    'product.outOfStock': 'Out of Stock',
     'product.reviews': 'reviews',
     'product.bestseller': 'Best Seller',
     'product.sale': 'Sale',
@@ -73,15 +91,24 @@ const translations: Record<Language, Record<string, string>> = {
     'product.sortPriceDesc': 'Price: High to Low',
     'product.sortRating': 'Highest Rated',
 
+    'product.vatNotice': 'incl. 19% VAT, excl. shipping',
+    'product.vatNoticeFree': 'incl. 19% VAT, free shipping',
+    'product.deliveryTime': 'Delivery time: 1–3 business days (DHL Express)',
+    'product.lowestPrice30d': 'Lowest price of the past 30 days',
+    'product.shippingModalLink': 'Shipping details',
+
     // Cart Drawer
     'cart.title': 'Your Shopping Cart',
     'cart.empty': 'Your cart is empty',
     'cart.emptySub': 'Discover our collection and add your favorite items.',
-    'cart.subtotal': 'Subtotal',
-    'cart.shipping': 'Shipping',
-    'cart.freeShipping': 'FREE (over $50)',
-    'cart.total': 'Estimated Total',
+    'cart.subtotal': 'Subtotal (gross)',
+    'cart.discount': 'Discount',
+    'cart.tax': 'Included 19% VAT',
+    'cart.shipping': 'Shipping (DHL Express)',
+    'cart.freeShipping': 'FREE (from 50 €)',
+    'cart.total': 'Total amount (incl. 19% VAT)',
     'cart.checkout': 'Proceed to Checkout',
+    'cart.checkoutBtn': 'Proceed to Checkout',
     'cart.continue': 'Continue Shopping',
     'cart.promo': 'Promo code applied: BLUE20',
 
@@ -90,8 +117,18 @@ const translations: Record<Language, Record<string, string>> = {
     'checkout.stripe': 'Powered by Stripe 256-bit SSL',
     'checkout.step1': 'Shipping Address',
     'checkout.step2': 'Payment Method',
-    'checkout.placeOrder': 'Authorize & Place Order',
+    'checkout.placeOrder': 'Order with obligation to pay',
     'checkout.orderSuccess': 'Order Placed Successfully!',
+    'checkout.summaryTitle': 'Order Summary & Essential Features (§ 312j BGB)',
+    'checkout.legalNotice': 'I have read the Terms & Conditions (AGB) and the Cancellation Policy (Widerrufsbelehrung) and agree to their application. I have taken note of the Privacy Policy.',
+    'checkout.vatNotice': 'All prices are gross and include 19% statutory German VAT.',
+    'checkout.methodCard': 'Credit / Debit Card',
+    'checkout.methodPaypal': 'PayPal',
+    'checkout.methodKlarna': 'Klarna',
+    'checkout.methodSepa': 'SEPA Direct Debit',
+    'checkout.methodGiropay': 'Giropay / Wero',
+    'checkout.methodApplePay': 'Apple Pay / Google Pay',
+    'checkout.dummyNotice': 'Demo sandbox active • Simulated approval without live charge',
 
     // Tracking
     'tracking.title': 'Live Package Tracker',
@@ -131,6 +168,9 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.impressum': 'Impressum (Company Info)',
     'footer.privacy': 'Privacy Policy (GDPR / DSGVO)',
     'footer.terms': 'Terms & Conditions (AGB)',
+    'footer.revocation': 'Right of Withdrawal & Sample Form (§ 312d BGB)',
+    'footer.battery': 'Battery & Electronic Waste Notice (BattG / ElektroG)',
+    'footer.cookies': 'Cookie Settings (§ 25 TDDDG)',
     'footer.paymentMethods': 'Secure Payment Options',
     'footer.newsletter': 'Newsletter & 10% Voucher',
     'footer.newsletterSub': 'Subscribe for weekly flash drops and German specialty arrivals.',
@@ -157,6 +197,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.adminMode': 'Geschäftsführung / Admin',
     'nav.welcome': 'Willkommen zurück',
     'nav.quickAccess': '1-Klick Demo-Zugang',
+    'nav.allProducts': 'Alle Produkte',
+
+    // Announcement Bar
+    'announcement.freeShipping': 'Kostenlose Express-Lieferung ab 50 €',
+    'announcement.promoCode': 'Gutscheincode BLUE20 für 20% Rabatt',
+    'announcement.stripeSecurity': 'Stripe 256-Bit SSL Verschlüsselung',
+    'announcement.trackOrders': 'Live-Sendungsverfolgung mit Echtzeit-Updates',
 
     // Hero & Slideshow
     'slideshow.title': 'Ausgewählte Kollektionen & Deutsche Handwerkskunst',
@@ -164,6 +211,7 @@ const translations: Record<Language, Record<string, string>> = {
     'slideshow.viewDeal': 'Angebot ansehen',
     'slideshow.freeShipping': 'Kostenloser Expressversand verfügbar',
     'slideshow.limitedOffer': 'Zeitlich begrenztes Angebot',
+    'slideshow.stripeSecurity': 'Geprüfte Stripe-Zahlungsgarantie',
 
     // Flash Sale
     'flash.title': 'Blitzangebote • Flash Sale',
@@ -182,6 +230,14 @@ const translations: Record<Language, Record<string, string>> = {
     'categories.all': 'Alle Produkte',
     'categories.germanOrigin': 'Made in Germany',
     'categories.filterBy': 'Nach Abteilung filtern',
+    'category.shopBy': 'Nach Abteilung shoppen',
+    'category.all': 'Alle Produkte',
+    'category.clearFilter': 'Filter aufheben',
+    'category.sort': 'Sortieren nach',
+    'category.sortFeatured': 'Empfohlen',
+    'category.sortPriceLow': 'Preis: Aufsteigend',
+    'category.sortPriceHigh': 'Preis: Absteigend',
+    'category.sortRating': 'Beste Bewertungen',
 
     // Product Card & Listing
     'product.addToCart': 'In den Warenkorb',
@@ -189,6 +245,8 @@ const translations: Record<Language, Record<string, string>> = {
     'product.quickView': 'Schnellansicht',
     'product.inStock': 'Auf Lager',
     'product.lowStock': 'Nur noch {count} Stück',
+    'product.onlyLeft': 'Nur noch:',
+    'product.outOfStock': 'Ausverkauft',
     'product.reviews': 'Bewertungen',
     'product.bestseller': 'Bestseller',
     'product.sale': 'Angebot',
@@ -199,16 +257,24 @@ const translations: Record<Language, Record<string, string>> = {
     'product.sortPriceAsc': 'Preis: Aufsteigend',
     'product.sortPriceDesc': 'Preis: Absteigend',
     'product.sortRating': 'Beste Bewertungen',
+    'product.vatNotice': 'inkl. 19% MwSt., zzgl. Versand',
+    'product.vatNoticeFree': 'inkl. 19% MwSt., versandkostenfrei',
+    'product.deliveryTime': 'Lieferzeit: 1–3 Werktage (DHL Express)',
+    'product.lowestPrice30d': 'Niedrigster Gesamtpreis der letzten 30 Tage',
+    'product.shippingModalLink': 'Versandinformationen',
 
     // Cart Drawer
     'cart.title': 'Ihr Warenkorb',
     'cart.empty': 'Ihr Warenkorb ist leer',
     'cart.emptySub': 'Entdecken Sie unsere Kollektionen und fügen Sie Lieblingsartikel hinzu.',
-    'cart.subtotal': 'Zwischensumme',
-    'cart.shipping': 'Versand',
-    'cart.freeShipping': 'KOSTENLOS (ab 50€)',
-    'cart.total': 'Gesamtsumme (inkl. MwSt.)',
+    'cart.subtotal': 'Zwischensumme (brutto)',
+    'cart.discount': 'Rabatt',
+    'cart.tax': 'Darin enthaltene 19% MwSt.',
+    'cart.shipping': 'Versand (DHL Express)',
+    'cart.freeShipping': 'KOSTENLOS (ab 50 €)',
+    'cart.total': 'Gesamtbetrag (inkl. 19% MwSt.)',
     'cart.checkout': 'Zur Kasse gehen',
+    'cart.checkoutBtn': 'Zur Kasse gehen',
     'cart.continue': 'Weiter einkaufen',
     'cart.promo': 'Gutscheincode aktiv: BLUE20',
 
@@ -217,8 +283,18 @@ const translations: Record<Language, Record<string, string>> = {
     'checkout.stripe': 'Verschlüsselt mit Stripe 256-Bit SSL',
     'checkout.step1': 'Lieferadresse',
     'checkout.step2': 'Zahlungsmethode',
-    'checkout.placeOrder': 'Jetzt zahlungspflichtig bestellen',
+    'checkout.placeOrder': 'Zahlungspflichtig bestellen',
     'checkout.orderSuccess': 'Bestellung erfolgreich aufgegeben!',
+    'checkout.summaryTitle': 'Bestellübersicht & Wesentliche Merkmale (§ 312j BGB)',
+    'checkout.legalNotice': 'Ich habe die Allgemeinen Geschäftsbedingungen (AGB) und die Widerrufsbelehrung zur Kenntnis genommen und erkläre mich mit deren Geltung einverstanden. Die Datenschutzerklärung habe ich zur Kenntnis genommen.',
+    'checkout.vatNotice': 'Alle Preise verstehen sich als Endpreise inklusive der gesetzlichen deutschen Mehrwertsteuer (19% MwSt.).',
+    'checkout.methodCard': 'Kredit- / Debitkarte',
+    'checkout.methodPaypal': 'PayPal',
+    'checkout.methodKlarna': 'Klarna',
+    'checkout.methodSepa': 'SEPA-Lastschrift',
+    'checkout.methodGiropay': 'Giropay / Wero',
+    'checkout.methodApplePay': 'Apple Pay / Google Pay',
+    'checkout.dummyNotice': 'Demo-Sandbox aktiv • Sofortige Simulation ohne Echtgeld-Abbuchung',
 
     // Tracking
     'tracking.title': 'Echtzeit-Sendungsverfolgung',
@@ -258,6 +334,9 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.impressum': 'Impressum',
     'footer.privacy': 'Datenschutzerklärung (DSGVO)',
     'footer.terms': 'Allgemeine Geschäftsbedingungen (AGB)',
+    'footer.revocation': 'Widerrufsbelehrung & Musterformular (§ 312d BGB)',
+    'footer.battery': 'Batterie- & Entsorgungshinweise (BattG / ElektroG)',
+    'footer.cookies': 'Cookie-Einstellungen (§ 25 TDDDG)',
     'footer.paymentMethods': 'Sichere Zahlungsarten',
     'footer.newsletter': 'Newsletter & 10% Rabatt',
     'footer.newsletterSub': 'Erhalten Sie wöchentliche Blitzangebote und exklusive Neuheiten direkt per E-Mail.',
@@ -268,39 +347,25 @@ const translations: Record<Language, Record<string, string>> = {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const LANGUAGE_STORAGE_KEY = 'bluecart_selected_lang';
-
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Language | null;
-      if (saved === 'en' || saved === 'de') return saved;
-      // Detect browser language
-      if (navigator.language && navigator.language.startsWith('de')) {
-        return 'de';
-      }
-    }
-    return 'en';
-  });
+  const [language, setLanguageState] = useState<Language>('de');
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
-    }
   };
 
   const t = (key: string, fallback?: string): string => {
     return translations[language][key] || fallback || key;
   };
 
-  const formatPrice = (amount: number): string => {
+  const formatPrice = (amount?: number | null): string => {
+    const num = typeof amount === 'number' && !isNaN(amount) ? amount : (Number(amount) || 0);
     if (language === 'de') {
-      // German formatting with Euro: e.g. 189,99 €
-      return `${amount.toFixed(2).replace('.', ',')} €`;
+      // Standard German price notation: 49,99 €
+      return `${num.toFixed(2).replace('.', ',')} €`;
     }
-    // English formatting with Dollar: e.g. $189.99
-    return `$${amount.toFixed(2)}`;
+    // Standard European English price notation for German store: €49.99
+    return `€${num.toFixed(2)}`;
   };
 
   return (

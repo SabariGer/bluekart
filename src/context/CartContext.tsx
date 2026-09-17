@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, Product } from '../types';
+import { storeService } from '../lib/storeService';
 
 interface CartContextType {
   items: CartItem[];
@@ -15,7 +16,7 @@ interface CartContextType {
   total: number;
   promoCode: string;
   appliedDiscountPercent: number;
-  applyPromoCode: (code: string) => { success: boolean; message: string };
+  applyPromoCode: (code: string) => Promise<{ success: boolean; message: string }>;
   removePromoCode: () => void;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
@@ -23,24 +24,20 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CART_STORAGE_KEY = 'bluecart_cart_items_v1';
+// Generate or use a session cart identifier stored in memory
+const runtimeCartSessionId = `cart_session_${Math.floor(100000 + Math.random() * 900000)}`;
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(CART_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [items, setItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [appliedDiscountPercent, setAppliedDiscountPercent] = useState(0);
+  const [discountFixedAmount, setDiscountFixedAmount] = useState(0);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
+  // Sync with Firestore carts collection (No local storage or browser cookies used)
   useEffect(() => {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
+    storeService.saveCart(runtimeCartSessionId, items, promoCode);
+  }, [items, promoCode]);
 
   const addItem = (product: Product, quantity = 1) => {
     setItems((prev) => {
@@ -76,35 +73,46 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems([]);
     setPromoCode('');
     setAppliedDiscountPercent(0);
-    localStorage.removeItem(CART_STORAGE_KEY);
+    setDiscountFixedAmount(0);
+    storeService.clearCart(runtimeCartSessionId);
   };
 
-  const applyPromoCode = (code: string) => {
-    const clean = code.trim().toUpperCase();
-    if (clean === 'BLUE20') {
-      setPromoCode('BLUE20');
-      setAppliedDiscountPercent(20);
-      return { success: true, message: 'Code BLUE20 applied! 20% discount added.' };
+  const applyPromoCode = async (code: string): Promise<{ success: boolean; message: string }> => {
+    const res = await storeService.validateCoupon(code, subtotal);
+    if (res.valid) {
+      setPromoCode(code.trim().toUpperCase());
+      setAppliedDiscountPercent(res.discountPercent);
+      if (res.discountAmount > 0 && res.discountPercent === 0) {
+        setDiscountFixedAmount(res.discountAmount);
+      } else {
+        setDiscountFixedAmount(0);
+      }
+      return { success: true, message: res.message };
     }
-    if (clean === 'FREESHIP') {
-      setPromoCode('FREESHIP');
-      setAppliedDiscountPercent(10);
-      return { success: true, message: 'Code FREESHIP applied! 10% discount added.' };
-    }
-    return { success: false, message: 'Invalid promo code. Try "BLUE20"' };
+    return { success: false, message: res.message };
   };
 
   const removePromoCode = () => {
     setPromoCode('');
     setAppliedDiscountPercent(0);
+    setDiscountFixedAmount(0);
   };
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  // In German law (PAngV § 1 Abs. 2), consumer prices are gross (Bruttopreise inkl. MwSt.)
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const discount = Math.round((subtotal * (appliedDiscountPercent / 100)) * 100) / 100;
-  const shippingCost = subtotal > 50 || items.length === 0 ? 0 : 8.99;
-  const tax = Math.round((Math.max(0, subtotal - discount) * 0.08) * 100) / 100;
-  const total = Math.round((Math.max(0, subtotal - discount) + tax + shippingCost) * 100) / 100;
+  
+  const discountFromPercent = Math.round(((subtotal * appliedDiscountPercent) / 100) * 100) / 100;
+  const discount = Math.min(subtotal, discountFromPercent + discountFixedAmount);
+
+  // German standard shipping: DHL Express 4.90 €, free shipping threshold at 40 € or with free shipping voucher
+  const isFreeShippingVoucher = promoCode === 'VERSANDFREI' || discountFixedAmount >= 4.9;
+  const shippingCost = subtotal >= 40 || items.length === 0 || isFreeShippingVoucher ? 0 : 4.9;
+  
+  const taxableAmount = Math.max(0, subtotal - discount);
+  // Statutory German VAT: 19% Mehrwertsteuer contained within the gross price
+  const tax = Math.round((taxableAmount - taxableAmount / 1.19) * 100) / 100;
+  const total = Math.round((taxableAmount + shippingCost) * 100) / 100;
 
   return (
     <CartContext.Provider

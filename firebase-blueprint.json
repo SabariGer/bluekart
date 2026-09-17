@@ -1,0 +1,195 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A store catalog product item with pricing, inventory and margin details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "title_de": { "type": "string", "maxLength": 200 },
+        "slug": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "description_de": { "type": "string", "maxLength": 2000 },
+        "price": { "type": "number" },
+        "compare_at_price": { "type": "number" },
+        "cost_price": { "type": "number" },
+        "category_id": { "type": "string", "maxLength": 100 },
+        "category_name": { "type": "string", "maxLength": 100 },
+        "category_name_de": { "type": "string", "maxLength": 100 },
+        "inventory_count": { "type": "number" },
+        "sku": { "type": "string", "maxLength": 50 },
+        "images": { "type": "array" },
+        "featured_badge": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviews_count": { "type": "number" },
+        "is_active": { "type": "boolean" },
+        "created_at": { "type": "string" },
+        "is_flash_deal": { "type": "boolean" },
+        "flash_deal_discount": { "type": "number" },
+        "origin_country": { "type": "string" }
+      },
+      "required": ["id", "title", "price", "category_id", "inventory_count", "sku", "is_active"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Product classification category.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "name_de": { "type": "string", "maxLength": 100 },
+        "slug": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "description_de": { "type": "string", "maxLength": 1000 },
+        "image_url": { "type": "string" },
+        "icon_name": { "type": "string" },
+        "product_count": { "type": "number" },
+        "is_active": { "type": "boolean" },
+        "created_at": { "type": "string" },
+        "is_german_specialty": { "type": "boolean" }
+      },
+      "required": ["id", "name", "slug", "is_active"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase order with statutory German VAT, tracking and item details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "order_number": { "type": "string", "maxLength": 50 },
+        "user_id": { "type": "string" },
+        "customer_name": { "type": "string", "maxLength": 150 },
+        "customer_email": { "type": "string", "maxLength": 150 },
+        "customer_phone": { "type": "string", "maxLength": 50 },
+        "shipping_address": { "type": "object" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "tax": { "type": "number" },
+        "shipping_cost": { "type": "number" },
+        "discount": { "type": "number" },
+        "total": { "type": "number" },
+        "payment_method": { "type": "string" },
+        "payment_status": { "type": "string" },
+        "payment_details": { "type": "object" },
+        "order_status": { "type": "string" },
+        "tracking_number": { "type": "string" },
+        "carrier": { "type": "string" },
+        "estimated_delivery": { "type": "string" },
+        "delivery_history": { "type": "array" },
+        "invoice_number": { "type": "string" },
+        "b2b_vat_id": { "type": "string" },
+        "is_packstation": { "type": "boolean" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "order_number", "customer_name", "customer_email", "items", "total", "payment_method", "payment_status", "order_status"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Product review written by a customer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "product_id": { "type": "string", "maxLength": 100 },
+        "user_id": { "type": "string" },
+        "author_name": { "type": "string", "maxLength": 100 },
+        "rating": { "type": "number" },
+        "comment": { "type": "string", "maxLength": 2000 },
+        "created_at": { "type": "string" },
+        "verified_purchase": { "type": "boolean" }
+      },
+      "required": ["id", "product_id", "author_name", "rating", "comment", "created_at"]
+    },
+    "Wishlist": {
+      "title": "Wishlist",
+      "description": "Customer wishlist of bookmarked products.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "product_ids": { "type": "array" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "product_ids"]
+    },
+    "ReturnRequest": {
+      "title": "ReturnRequest",
+      "description": "Statutory 14-day cancellation and return request (Widerrufsrecht).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "order_id": { "type": "string" },
+        "order_number": { "type": "string" },
+        "customer_email": { "type": "string" },
+        "reason": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string" },
+        "items": { "type": "array" },
+        "rma_code": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "order_id", "order_number", "customer_email", "reason", "status", "rma_code", "created_at"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Promotional discount voucher code.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string", "maxLength": 50 },
+        "discount_percent": { "type": "number" },
+        "min_amount": { "type": "number" },
+        "description": { "type": "string", "maxLength": 200 },
+        "is_active": { "type": "boolean" }
+      },
+      "required": ["id", "code", "discount_percent", "is_active"]
+    },
+    "Cart": {
+      "title": "Cart",
+      "description": "Server-side stored active shopping cart in Firestore.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "items": { "type": "array" },
+        "promo_code": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "items"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Catalog products collection with wholesale cost, stock, and margins."
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Store department categories."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer purchase orders with statutory German VAT and tracking."
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Customer reviews with verified purchase flags."
+    },
+    "/wishlists/{wishlistId}": {
+      "schema": { "$ref": "#/entities/Wishlist" },
+      "description": "User or guest bookmarked products list."
+    },
+    "/returns/{returnId}": {
+      "schema": { "$ref": "#/entities/ReturnRequest" },
+      "description": "Statutory 14-day cancellation and return requests."
+    },
+    "/coupons/{couponId}": {
+      "schema": { "$ref": "#/entities/Coupon" },
+      "description": "Voucher and promotional codes."
+    },
+    "/carts/{cartId}": {
+      "schema": { "$ref": "#/entities/Cart" },
+      "description": "Active shopping cart storage in cloud database."
+    }
+  }
+}

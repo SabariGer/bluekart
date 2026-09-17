@@ -48,6 +48,7 @@ export const FlashSaleSection: React.FC<FlashSaleSectionProps> = ({
 
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
     e.stopPropagation();
+    if (product.inventory_count <= 0) return;
     addItem(product);
     setAddedIds((prev) => ({ ...prev, [product.id]: true }));
     setTimeout(() => {
@@ -168,6 +169,9 @@ export const FlashSaleSection: React.FC<FlashSaleSectionProps> = ({
                         </span>
                       )}
                     </div>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      {t('product.vatNotice')}
+                    </p>
 
                     {/* Stock Progress Bar */}
                     <div className="mt-3">
@@ -190,9 +194,12 @@ export const FlashSaleSection: React.FC<FlashSaleSectionProps> = ({
                   <button
                     type="button"
                     onClick={(e) => handleAddToCart(e, product)}
-                    className="w-full mt-4 py-2 px-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-xl text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                    disabled={product.inventory_count <= 0}
+                    className="w-full mt-4 py-2 px-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 text-white font-bold rounded-xl text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    {isAdded ? (
+                    {product.inventory_count <= 0 ? (
+                      <span>{t('product.outOfStock')}</span>
+                    ) : isAdded ? (
                       <>
                         <Check className="w-3.5 h-3.5" />
                         <span>{t('product.added')}</span>

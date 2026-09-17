@@ -255,21 +255,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onProceedToCheckout }) =
                 )}
 
                 <div className="flex justify-between">
-                  <span>{t('cart.tax')} (8%)</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">{formatPrice(tax)}</span>
-                </div>
-
-                <div className="flex justify-between">
                   <span>{t('cart.shipping')}</span>
                   <span className="font-semibold text-slate-900 dark:text-white">
                     {shippingCost === 0 ? (
                       <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase text-[10px]">
-                        {language === 'de' ? 'GRATIS' : 'FREE'}
+                        {language === 'de' ? 'KOSTENLOS (ab 50 €)' : 'FREE (from 50 €)'}
                       </span>
                     ) : (
                       formatPrice(shippingCost)
                     )}
                   </span>
+                </div>
+
+                <div className="flex justify-between text-slate-500 dark:text-slate-400 text-[11px] pt-0.5">
+                  <span>{t('cart.tax')}</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{formatPrice(tax)}</span>
                 </div>
 
                 <div className="border-t border-slate-200 dark:border-slate-700 pt-2 flex justify-between text-sm font-bold text-slate-900 dark:text-white">

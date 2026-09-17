@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import { UserProfile, UserRole } from '../types';
 import { DEMO_USERS } from '../data/seedData';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -9,6 +10,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   signup: (name: string, email: string, pass: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   loginAsDemo: (role: UserRole) => void;
@@ -17,82 +19,88 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AUTH_STORAGE_KEY = 'bluecart_current_user';
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(DEMO_USERS.customer); // Friendly default customer view
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Load persisted user if available, otherwise require login first
-    const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setUser(parsed);
-      } catch {
-        setUser(null);
-        localStorage.removeItem(AUTH_STORAGE_KEY);
+    // Listen for real Firebase auth state changes
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const isAdminUser =
+          firebaseUser.email === 'karthylock@gmail.com' ||
+          (firebaseUser.email && firebaseUser.email.toLowerCase().includes('admin'));
+
+        const profile: UserProfile = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || 'customer@bluecart.de',
+          name: firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Customer'),
+          role: isAdminUser ? 'admin' : 'customer',
+          avatar_url: firebaseUser.photoURL || undefined,
+          created_at: new Date().toISOString(),
+        };
+        setUser(profile);
       }
-    } else {
-      setUser(null);
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const saveUser = (u: UserProfile | null) => {
-    setUser(u);
-    if (u) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(u));
-    } else {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+  const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
+    setIsLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const res = await signInWithPopup(auth, provider);
+      const u = res.user;
+      const isAdminUser =
+        u.email === 'karthylock@gmail.com' ||
+        (u.email && u.email.toLowerCase().includes('admin'));
+
+      const profile: UserProfile = {
+        id: u.uid,
+        email: u.email || '',
+        name: u.displayName || u.email?.split('@')[0] || 'User',
+        role: isAdminUser ? 'admin' : 'customer',
+        avatar_url: u.photoURL || undefined,
+        created_at: new Date().toISOString(),
+      };
+      setUser(profile);
+      setIsLoading(false);
+      return { success: true };
+    } catch (err: any) {
+      setIsLoading(false);
+      return { success: false, error: err.message || 'Google Login failed' };
     }
   };
 
-  const login = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, _pass: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     try {
-      if (isSupabaseConfigured && supabase) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password: pass,
-        });
-        if (!error && data.user) {
-          const profile: UserProfile = {
-            id: data.user.id,
-            email: data.user.email || email,
-            name: data.user.user_metadata?.name || email.split('@')[0],
-            role: (data.user.user_metadata?.role as UserRole) || (email.includes('admin') ? 'admin' : 'customer'),
-            created_at: data.user.created_at,
-          };
-          saveUser(profile);
-          setIsLoading(false);
-          return { success: true };
-        }
-      }
-
-      // Check demo credentials or match local accounts
       if (email.toLowerCase() === DEMO_USERS.admin.email.toLowerCase()) {
-        saveUser(DEMO_USERS.admin);
+        setUser(DEMO_USERS.admin);
         setIsLoading(false);
         return { success: true };
       }
 
       if (email.toLowerCase() === DEMO_USERS.customer.email.toLowerCase()) {
-        saveUser(DEMO_USERS.customer);
+        setUser(DEMO_USERS.customer);
         setIsLoading(false);
         return { success: true };
       }
 
-      // Allow any login with default password for smooth preview/testing
-      const newCustomUser: UserProfile = {
+      const isAdminUser =
+        email.toLowerCase() === 'karthylock@gmail.com' ||
+        email.toLowerCase().includes('admin');
+
+      const customUser: UserProfile = {
         id: `usr_${Date.now()}`,
         email,
         name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-        role: email.toLowerCase().includes('admin') ? 'admin' : 'customer',
+        role: isAdminUser ? 'admin' : 'customer',
         created_at: new Date().toISOString(),
       };
-      saveUser(newCustomUser);
+      setUser(customUser);
       setIsLoading(false);
       return { success: true };
     } catch (err: any) {
@@ -104,34 +112,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (
     name: string,
     email: string,
-    pass: string,
+    _pass: string,
     chosenRole: UserRole = 'customer'
   ): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     try {
-      if (isSupabaseConfigured && supabase) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password: pass,
-          options: {
-            data: { name, role: chosenRole },
-          },
-        });
-        if (!error && data.user) {
-          const profile: UserProfile = {
-            id: data.user.id,
-            email: data.user.email || email,
-            name,
-            role: chosenRole,
-            created_at: data.user.created_at,
-          };
-          saveUser(profile);
-          setIsLoading(false);
-          return { success: true };
-        }
-      }
-
-      // Local signup
       const newUser: UserProfile = {
         id: `usr_${Date.now()}`,
         email,
@@ -139,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: chosenRole,
         created_at: new Date().toISOString(),
       };
-      saveUser(newUser);
+      setUser(newUser);
       setIsLoading(false);
       return { success: true };
     } catch (err: any) {
@@ -149,24 +134,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    if (isSupabaseConfigured && supabase) {
-      await supabase.auth.signOut();
+    try {
+      await signOut(auth);
+    } catch {
+      // Ignored
     }
-    saveUser(null);
+    setUser(null);
   };
 
   const loginAsDemo = (targetRole: UserRole) => {
     const demo = DEMO_USERS[targetRole];
-    saveUser(demo);
+    setUser(demo);
   };
 
   const updateProfile = (data: Partial<UserProfile>) => {
     if (!user) return;
-    const updated = { ...user, ...data };
-    saveUser(updated);
+    setUser({ ...user, ...data });
   };
 
-  const role = user?.role || 'customer';
+  const role: UserRole = user?.role || 'customer';
   const isAdmin = role === 'admin';
 
   return (
@@ -177,6 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         isLoading,
         login,
+        loginWithGoogle,
         signup,
         logout,
         loginAsDemo,

@@ -11,11 +11,16 @@ import { CategoryBar } from './components/CategoryBar';
 import { ProductCard } from './components/ProductCard';
 import { ProductModal } from './components/ProductModal';
 import { CartDrawer } from './components/CartDrawer';
+import { WishlistDrawer } from './components/WishlistDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
+import { InvoiceModal } from './components/InvoiceModal';
+import { ReturnsPortalModal } from './components/ReturnsPortalModal';
 import { DeliveryTracker } from './components/DeliveryTracker';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AuthModal } from './components/AuthModal';
 import { CustomerOrdersModal } from './components/CustomerOrdersModal';
+import { LegalModal, LegalTab } from './components/LegalModal';
+import { CookieBanner } from './components/CookieBanner';
 import { Footer } from './components/Footer';
 import { LoginPage } from './components/LoginPage';
 import { storeService } from './lib/storeService';
@@ -42,34 +47,98 @@ function StoreMain() {
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'rating'>('featured');
   const [activeTab, setActiveTab] = useState<'store' | 'tracker'>('store');
 
-  // Modal states
+  // Modal & Drawer states
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [wishlistIds, setWishlistIds] = useState<string[]>([]);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState<Order | null>(null);
+  const [isReturnsOpen, setIsReturnsOpen] = useState(false);
+  const [returnsInitialOrder, setReturnsInitialOrder] = useState<Order | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(null);
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
+  const [legalInitialTab, setLegalInitialTab] = useState<LegalTab>('impressum');
+
+  const handleOpenLegalTab = (tab: LegalTab) => {
+    setLegalInitialTab(tab);
+    setIsLegalOpen(true);
+  };
 
   useEffect(() => {
     if (user) {
       loadStoreData();
+      loadWishlist();
+      const unsub = storeService.subscribeToOrders((newOrders) => {
+        setOrders(newOrders);
+      });
+      return () => unsub();
     }
   }, [user]);
 
   const loadStoreData = async () => {
     setIsLoading(true);
     try {
-      const [prods, cats] = await Promise.all([
+      const [prods, cats, ords] = await Promise.all([
         storeService.getProducts(),
         storeService.getCategories(),
+        storeService.getOrders(),
       ]);
       setProducts(prods);
       setCategories(cats);
+      setOrders(ords);
     } catch (err) {
       console.error('Error loading store data:', err);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadWishlist = async () => {
+    if (!user) {
+      setWishlistIds([]);
+      return;
+    }
+    try {
+      const ids = await storeService.getWishlist(user.id);
+      setWishlistIds(ids || []);
+    } catch (err) {
+      console.error('Error loading wishlist:', err);
+    }
+  };
+
+  const handleToggleWishlist = async (productId: string) => {
+    if (!user) {
+      setIsAuthOpen(true);
+      return;
+    }
+    const isCurrently = wishlistIds.includes(productId);
+    // Optimistic UI
+    setWishlistIds((prev) =>
+      isCurrently ? prev.filter((id) => id !== productId) : [...prev, productId]
+    );
+    try {
+      const updated = await storeService.toggleWishlist(user.id, productId);
+      setWishlistIds(updated);
+    } catch (err) {
+      console.error('Error toggling wishlist item:', err);
+      loadWishlist();
+    }
+  };
+
+  const handleViewInvoice = (order: Order) => {
+    setSelectedInvoiceOrder(order);
+    setIsInvoiceOpen(true);
+  };
+
+  const handleOpenReturns = (order?: Order) => {
+    setReturnsInitialOrder(order || null);
+    setIsReturnsOpen(true);
   };
 
   // Auth gate: Show loading screen while checking session
@@ -138,7 +207,7 @@ function StoreMain() {
       {/* Top Banner */}
       <AnnouncementBar />
 
-      {/* Main Navbar with Language & Dark/Light Switchers */}
+      {/* Main Navbar with Language, Dark/Light Switchers, and Wishlist */}
       <Navbar
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenOrders={() => setIsOrdersOpen(true)}
@@ -149,6 +218,9 @@ function StoreMain() {
         onOpenAdmin={() => {
           if (isAdmin) setIsAdminOpen(true);
         }}
+        onOpenWishlist={() => setIsWishlistOpen(true)}
+        onOpenReturns={() => handleOpenReturns()}
+        wishlistCount={wishlistIds.length}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onSelectCategory={(id) => {
@@ -282,7 +354,10 @@ function StoreMain() {
                     <ProductCard
                       key={product.id}
                       product={product}
+                      isWishlisted={wishlistIds.includes(product.id)}
+                      onToggleWishlist={handleToggleWishlist}
                       onOpenDetails={(p) => setSelectedProduct(p)}
+                      onOpenShippingInfo={() => handleOpenLegalTab('shipping')}
                     />
                   ))}
                 </div>
@@ -297,11 +372,28 @@ function StoreMain() {
         onProceedToCheckout={() => setIsCheckoutOpen(true)}
       />
 
+      {/* Wishlist Drawer */}
+      <WishlistDrawer
+        isOpen={isWishlistOpen}
+        onClose={() => setIsWishlistOpen(false)}
+        wishlistIds={wishlistIds}
+        products={products}
+        onToggleWishlist={handleToggleWishlist}
+        onOpenProduct={(p) => {
+          setSelectedProduct(p);
+          setIsWishlistOpen(false);
+        }}
+      />
+
       {/* Product Detail Modal */}
       <ProductModal
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}
+        isWishlisted={selectedProduct ? wishlistIds.includes(selectedProduct.id) : false}
+        onToggleWishlist={handleToggleWishlist}
         onInstantCheckout={() => setIsCheckoutOpen(true)}
+        onOpenShipping={() => handleOpenLegalTab('shipping')}
+        onOpenRevocation={() => handleOpenLegalTab('revocation')}
       />
 
       {/* Stripe Checkout Modal */}
@@ -309,6 +401,25 @@ function StoreMain() {
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
         onOrderSuccess={handleOrderSuccess}
+        onOpenLegalTab={handleOpenLegalTab}
+        onViewInvoice={handleViewInvoice}
+      />
+
+      {/* Statutory Invoice Modal (§ 14 UStG) */}
+      <InvoiceModal
+        isOpen={isInvoiceOpen}
+        onClose={() => setIsInvoiceOpen(false)}
+        order={selectedInvoiceOrder}
+      />
+
+      {/* Customer Returns Portal Modal (14 Tage Widerruf § 355 BGB) */}
+      <ReturnsPortalModal
+        isOpen={isReturnsOpen}
+        onClose={() => setIsReturnsOpen(false)}
+        orders={orders}
+        customerEmail={user?.email || 'karthylock@gmail.com'}
+        initialOrder={returnsInitialOrder}
+        onReturnCreated={() => loadStoreData()}
       />
 
       {/* Customer Orders & Tracking History Modal */}
@@ -316,6 +427,20 @@ function StoreMain() {
         isOpen={isOrdersOpen}
         onClose={() => setIsOrdersOpen(false)}
         onTrackOrder={handleTrackSpecificOrder}
+        onViewInvoice={handleViewInvoice}
+        onOpenReturns={handleOpenReturns}
+      />
+
+      {/* Legal & Compliance Modal (Impressum, AGB, Widerruf, Datenschutz, PAngV, BatterieG) */}
+      <LegalModal
+        isOpen={isLegalOpen}
+        initialTab={legalInitialTab}
+        onClose={() => setIsLegalOpen(false)}
+      />
+
+      {/* GDPR / TDDDG Cookie Consent Banner with granular preferences */}
+      <CookieBanner
+        onOpenLegalTab={handleOpenLegalTab}
       />
 
       {/* Admin Dashboard - Strict Admin Only Guard */}
@@ -332,17 +457,19 @@ function StoreMain() {
         onClose={() => setIsAuthOpen(false)}
       />
 
-      {/* Footer with clean, useful information */}
+      {/* Footer with statutory German links & ODR dispute platform */}
       <Footer
         onOpenTracker={() => {
           setActiveTab('tracker');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onOpenOrders={() => setIsOrdersOpen(true)}
+        onOpenReturns={() => handleOpenReturns()}
         isAdmin={isAdmin}
         onOpenAdmin={() => {
           if (isAdmin) setIsAdminOpen(true);
         }}
+        onOpenLegalTab={handleOpenLegalTab}
       />
     </div>
   );
