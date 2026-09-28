@@ -23,6 +23,7 @@ import { LegalModal, LegalTab } from './components/LegalModal';
 import { CookieBanner } from './components/CookieBanner';
 import { Footer } from './components/Footer';
 import { LoginPage } from './components/LoginPage';
+import { UserProfileModal } from './components/UserProfileModal';
 import { storeService } from './lib/storeService';
 import { Product, Category, Order } from './types';
 import {
@@ -51,6 +52,7 @@ function StoreMain() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
@@ -210,6 +212,7 @@ function StoreMain() {
       {/* Main Navbar with Language, Dark/Light Switchers, and Wishlist */}
       <Navbar
         onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
         onOpenOrders={() => setIsOrdersOpen(true)}
         onOpenTracker={() => {
           setActiveTab('tracker');
@@ -455,6 +458,14 @@ function StoreMain() {
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
+      />
+
+      {/* Customer European Profile & WhatsApp Modal */}
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        onOpenOrders={() => setIsOrdersOpen(true)}
+        onOpenReturns={() => handleOpenReturns()}
       />
 
       {/* Footer with statutory German links & ODR dispute platform */}

@@ -156,7 +156,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         ...prev,
         name: user.name || prev.name,
         email: user.email || prev.email,
+        phone: user.whatsapp_number || user.phone || prev.phone,
+        street: user.address?.street || prev.street,
+        city: user.address?.city || prev.city,
+        state: user.address?.state || prev.state,
+        zip: user.address?.zip || prev.zip,
+        country: user.address?.country || prev.country,
       }));
+      if (user.address?.packstation) {
+        setPackstationNumber(user.address.packstation);
+      }
     }
   }, [isOpen, user]);
 

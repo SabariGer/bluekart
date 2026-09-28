@@ -24,11 +24,13 @@ import {
   ReturnRequest,
   Coupon,
   RestockAlert,
+  UserProfile,
 } from '../types';
 import { INITIAL_CATEGORIES, INITIAL_PRODUCTS, INITIAL_ORDERS } from '../data/seedData';
 
 // Firestore collection names
 const COLLECTIONS = {
+  USERS: 'users',
   PRODUCTS: 'products',
   CATEGORIES: 'categories',
   ORDERS: 'orders',
@@ -1194,5 +1196,97 @@ export const storeService = {
 
   async resetToDefaults() {
     await this.seedInitialDataIfNeeded();
+  },
+
+  // ---------------- USER PROFILE & EUROPEAN WHATSAPP ----------------
+  async getUserProfile(userId: string): Promise<UserProfile | null> {
+    try {
+      // First check localStorage for snappy client-side load
+      const localKey = `bluecart_user_${userId}`;
+      const localData = localStorage.getItem(localKey);
+      let localProfile: UserProfile | null = localData ? JSON.parse(localData) : null;
+
+      try {
+        const docRef = doc(db, COLLECTIONS.USERS, userId);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const profile = snap.data() as UserProfile;
+          localStorage.setItem(localKey, JSON.stringify(profile));
+          return profile;
+        }
+      } catch (fbErr) {
+        // Fallback to local profile or server API
+      }
+
+      return localProfile;
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+      return null;
+    }
+  },
+
+  async saveUserProfile(profile: UserProfile): Promise<UserProfile> {
+    const updated: UserProfile = {
+      ...profile,
+      last_login_at: new Date().toISOString(),
+    };
+
+    try {
+      // 1. Save to localStorage
+      localStorage.setItem(`bluecart_user_${profile.id}`, JSON.stringify(updated));
+      if (profile.whatsapp_number) {
+        localStorage.setItem(`bluecart_user_phone_${profile.whatsapp_number}`, JSON.stringify(updated));
+      }
+      if (profile.email) {
+        localStorage.setItem(`bluecart_user_email_${profile.email.toLowerCase()}`, JSON.stringify(updated));
+      }
+
+      // 2. Persist to Firestore
+      try {
+        await setDoc(doc(db, COLLECTIONS.USERS, profile.id), updated, { merge: true });
+      } catch (fbErr) {
+        console.warn('Firestore user profile save notice (offline fallback active):', fbErr);
+      }
+
+      // 3. Sync with backend API
+      try {
+        await fetch('/api/auth/update-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user: updated }),
+        });
+      } catch {
+        // Ignored
+      }
+
+      return updated;
+    } catch (err) {
+      console.error('Failed to save user profile:', err);
+      return updated;
+    }
+  },
+
+  async findUserProfileByIdentifier(identifier: string): Promise<UserProfile | null> {
+    const clean = identifier.trim().toLowerCase();
+    // Check phone key
+    const phoneData = localStorage.getItem(`bluecart_user_phone_${clean}`);
+    if (phoneData) return JSON.parse(phoneData);
+
+    // Check email key
+    const emailData = localStorage.getItem(`bluecart_user_email_${clean}`);
+    if (emailData) return JSON.parse(emailData);
+
+    // Try Firestore query
+    try {
+      const q = query(collection(db, COLLECTIONS.USERS), where('whatsapp_number', '==', clean));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        return snap.docs[0].data() as UserProfile;
+      }
+    } catch {
+      // Ignored
+    }
+
+    return null;
   },
 };

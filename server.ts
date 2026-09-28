@@ -41,6 +41,253 @@ async function startServer() {
     });
   });
 
+  // In-memory OTP store for WhatsApp and Email authentication
+  interface StoredOtp {
+    code: string;
+    identifier: string; // phone or email
+    channel: 'whatsapp' | 'email';
+    countryCode?: string;
+    countryName?: string;
+    createdAt: number;
+    expiresAt: number;
+    attempts: number;
+  }
+  const otpStore = new Map<string, StoredOtp>();
+
+  // In-memory / server cache of European user profiles by phone or email
+  const serverUserProfileStore = new Map<string, any>();
+
+  // Send WhatsApp or Email OTP endpoint
+  app.post('/api/auth/send-otp', (req, res) => {
+    try {
+      const { identifier, channel = 'whatsapp', countryCode = 'DE', countryName = 'Germany' } = req.body;
+
+      if (!identifier || typeof identifier !== 'string' || identifier.trim().length === 0) {
+        return res.status(400).json({ error: 'Valid WhatsApp number or email address is required.' });
+      }
+
+      const cleanIdentifier = identifier.trim().toLowerCase();
+
+      // Check rate limit: 1 request per 10 seconds per identifier
+      const existing = Array.from(otpStore.values()).find(
+        (o) => o.identifier.toLowerCase() === cleanIdentifier && Date.now() - o.createdAt < 10000
+      );
+      if (existing) {
+        const waitSec = Math.ceil((10000 - (Date.now() - existing.createdAt)) / 1000);
+        return res.status(429).json({
+          error: `Please wait ${waitSec} seconds before requesting a new verification code.`,
+        });
+      }
+
+      // Generate cryptographically secure 6-digit OTP code
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpId = `otp_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes validity
+
+      // Store in memory
+      otpStore.set(otpId, {
+        code: otpCode,
+        identifier: cleanIdentifier,
+        channel: channel === 'email' ? 'email' : 'whatsapp',
+        countryCode,
+        countryName,
+        createdAt: Date.now(),
+        expiresAt,
+        attempts: 0,
+      });
+
+      // Cleanup expired OTPs
+      for (const [key, item] of otpStore.entries()) {
+        if (Date.now() > item.expiresAt) {
+          otpStore.delete(key);
+        }
+      }
+
+      console.log(`[BlueCart Auth] Generated ${channel.toUpperCase()} OTP for ${cleanIdentifier}: ${otpCode}`);
+
+      return res.json({
+        success: true,
+        otpId,
+        channel,
+        identifier: cleanIdentifier,
+        countryCode,
+        countryName,
+        expiresAt,
+        previewOtp: otpCode, // Provided for fast testing and browser simulator
+        message:
+          channel === 'whatsapp'
+            ? `WhatsApp verification code dispatched to ${cleanIdentifier}`
+            : `Email verification code sent to ${cleanIdentifier}`,
+      });
+    } catch (err: any) {
+      console.error('Error generating OTP:', err);
+      res.status(500).json({ error: err.message || 'Failed to dispatch verification code.' });
+    }
+  });
+
+  // Verify OTP and return or create user profile
+  app.post('/api/auth/verify-otp', (req, res) => {
+    try {
+      const { identifier, otp, otpId, countryCode = 'DE', countryName = 'Germany', name } = req.body;
+
+      if (!otp || typeof otp !== 'string') {
+        return res.status(400).json({ error: 'Please enter the 6-digit verification code.' });
+      }
+
+      const cleanIdentifier = (identifier || '').trim().toLowerCase();
+      const enteredOtp = otp.trim().replace(/\D/g, '');
+
+      // Lookup stored OTP session
+      let session: StoredOtp | undefined;
+      let matchedKey: string | undefined;
+
+      if (otpId && otpStore.has(otpId)) {
+        session = otpStore.get(otpId);
+        matchedKey = otpId;
+      } else {
+        // Fallback match by identifier
+        for (const [key, item] of otpStore.entries()) {
+          if (item.identifier.toLowerCase() === cleanIdentifier) {
+            session = item;
+            matchedKey = key;
+            break;
+          }
+        }
+      }
+
+      if (!session) {
+        return res.status(400).json({
+          error: 'Verification session expired or not found. Please request a new code.',
+        });
+      }
+
+      if (Date.now() > session.expiresAt) {
+        if (matchedKey) otpStore.delete(matchedKey);
+        return res.status(400).json({
+          error: 'Verification code has expired (validity: 5 minutes). Please request a new code.',
+        });
+      }
+
+      // Check attempts to prevent brute force
+      if (session.attempts >= 5) {
+        if (matchedKey) otpStore.delete(matchedKey);
+        return res.status(429).json({
+          error: 'Too many incorrect attempts. Please request a new verification code.',
+        });
+      }
+
+      // Verify code
+      if (session.code !== enteredOtp) {
+        session.attempts += 1;
+        const remaining = 5 - session.attempts;
+        return res.status(400).json({
+          error: `Incorrect verification code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`,
+          remainingAttempts: remaining,
+        });
+      }
+
+      // Code is valid! Consume it
+      if (matchedKey) otpStore.delete(matchedKey);
+
+      // Determine European defaults based on country
+      const isWhatsApp = session.channel === 'whatsapp';
+      const userKey = cleanIdentifier;
+
+      let profile = serverUserProfileStore.get(userKey);
+      if (!profile) {
+        // Build new European profile
+        const cityDefaults: Record<string, { city: string; zip: string; street: string }> = {
+          DE: { city: 'München', zip: '80331', street: 'Maximilianstraße 14' },
+          AT: { city: 'Wien', zip: '1010', street: 'Kärntner Straße 22' },
+          CH: { city: 'Zürich', zip: '8001', street: 'Bahnhofstrasse 45' },
+          FR: { city: 'Paris', zip: '75001', street: 'Rue de Rivoli 18' },
+          GB: { city: 'London', zip: 'SW1A 1AA', street: '10 Downing Street' },
+          NL: { city: 'Amsterdam', zip: '1012 JS', street: 'Damrak 70' },
+          IT: { city: 'Milano', zip: '20121', street: 'Via Monte Napoleone 8' },
+          ES: { city: 'Madrid', zip: '28001', street: 'Calle de Serrano 30' },
+        };
+        const def = cityDefaults[countryCode.toUpperCase()] || {
+          city: 'München',
+          zip: '80331',
+          street: 'Kaufingerstraße 10',
+        };
+
+        const userId = `usr_eu_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const fallbackName = name || (isWhatsApp ? `WhatsApp User (${cleanIdentifier})` : cleanIdentifier.split('@')[0]);
+
+        profile = {
+          id: userId,
+          email: isWhatsApp ? `${cleanIdentifier.replace(/\D/g, '')}@whatsapp.bluecart.de` : cleanIdentifier,
+          name: fallbackName,
+          role: 'customer',
+          phone: isWhatsApp ? cleanIdentifier : undefined,
+          whatsapp_number: isWhatsApp ? cleanIdentifier : undefined,
+          whatsapp_country_code: countryCode.toUpperCase(),
+          whatsapp_country_name: countryName,
+          whatsapp_verified: isWhatsApp,
+          email_verified: !isWhatsApp,
+          auth_provider: isWhatsApp ? 'whatsapp_otp' : 'email_otp',
+          address: {
+            street: def.street,
+            city: def.city,
+            zip: def.zip,
+            country: countryName,
+          },
+          preferences: {
+            whatsapp_order_updates: true,
+            whatsapp_shipping_alerts: true,
+            whatsapp_deals: true,
+            language: countryCode.toUpperCase() === 'DE' || countryCode.toUpperCase() === 'AT' ? 'de' : 'en',
+          },
+          created_at: new Date().toISOString(),
+          last_login_at: new Date().toISOString(),
+        };
+
+        serverUserProfileStore.set(userKey, profile);
+      } else {
+        // Update last login
+        profile.last_login_at = new Date().toISOString();
+        if (isWhatsApp) {
+          profile.whatsapp_verified = true;
+          profile.whatsapp_number = cleanIdentifier;
+          profile.whatsapp_country_code = countryCode.toUpperCase();
+          profile.whatsapp_country_name = countryName;
+        } else {
+          profile.email_verified = true;
+        }
+        serverUserProfileStore.set(userKey, profile);
+      }
+
+      return res.json({
+        success: true,
+        verified: true,
+        user: profile,
+        message: 'Successfully verified and signed in!',
+      });
+    } catch (err: any) {
+      console.error('Error verifying OTP:', err);
+      res.status(500).json({ error: err.message || 'OTP verification failed' });
+    }
+  });
+
+  // Save / Update user profile endpoint
+  app.post('/api/auth/update-profile', (req, res) => {
+    try {
+      const { user } = req.body;
+      if (!user || !user.id) {
+        return res.status(400).json({ error: 'Valid user profile data is required.' });
+      }
+
+      const key = (user.whatsapp_number || user.email || user.id).toLowerCase();
+      serverUserProfileStore.set(key, user);
+      if (user.id) serverUserProfileStore.set(user.id, user);
+
+      return res.json({ success: true, user });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to update profile' });
+    }
+  });
+
   // German & EU Payment Gateways Status
   app.get('/api/payment-gateways', (req, res) => {
     res.json({

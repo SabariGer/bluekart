@@ -156,9 +156,36 @@
         "updated_at": { "type": "string" }
       },
       "required": ["id", "items"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "European shopper profile with verified WhatsApp phone number, shipping address, and communication preferences.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "maxLength": 150 },
+        "name": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string" },
+        "phone": { "type": "string", "maxLength": 50 },
+        "whatsapp_number": { "type": "string", "maxLength": 50 },
+        "whatsapp_country_code": { "type": "string", "maxLength": 10 },
+        "whatsapp_country_name": { "type": "string", "maxLength": 100 },
+        "whatsapp_verified": { "type": "boolean" },
+        "email_verified": { "type": "boolean" },
+        "auth_provider": { "type": "string" },
+        "preferences": { "type": "object" },
+        "address": { "type": "object" },
+        "created_at": { "type": "string" },
+        "last_login_at": { "type": "string" }
+      },
+      "required": ["id", "name"]
     }
   },
   "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User account profiles with European WhatsApp credentials and delivery address."
+    },
     "/products/{productId}": {
       "schema": { "$ref": "#/entities/Product" },
       "description": "Catalog products collection with wholesale cost, stock, and margins."

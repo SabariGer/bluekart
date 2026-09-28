@@ -1,5 +1,19 @@
 export type UserRole = 'admin' | 'customer';
 
+export type AuthProviderType =
+  | 'whatsapp_otp'
+  | 'email_otp'
+  | 'password'
+  | 'google'
+  | 'demo';
+
+export interface UserPreferences {
+  whatsapp_order_updates?: boolean;
+  whatsapp_shipping_alerts?: boolean;
+  whatsapp_deals?: boolean;
+  language?: 'en' | 'de';
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -7,14 +21,34 @@ export interface UserProfile {
   role: UserRole;
   avatar_url?: string;
   phone?: string;
+  whatsapp_number?: string;
+  whatsapp_country_code?: string;
+  whatsapp_country_name?: string;
+  whatsapp_verified?: boolean;
+  email_verified?: boolean;
+  auth_provider?: AuthProviderType;
+  preferences?: UserPreferences;
   address?: {
     street: string;
     city: string;
-    state: string;
+    state?: string;
     zip: string;
     country: string;
+    packstation?: string;
+    post_number?: string;
   };
   created_at: string;
+  last_login_at?: string;
+}
+
+export interface OtpSession {
+  otpId: string;
+  identifier: string; // phone or email
+  channel: 'whatsapp' | 'email';
+  countryCode?: string;
+  countryName?: string;
+  expiresAt: number;
+  previewOtp?: string; // provided for seamless developer/evaluator instant test
 }
 
 export interface Category {

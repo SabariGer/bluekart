@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { UserPlus, Lock, Mail, User, Globe, ArrowRight, CheckCircle2, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { EUROPEAN_COUNTRIES } from '../../data/europeanCountries';
+import { UserPlus, Lock, Mail, User, Globe, ArrowRight, CheckCircle2, ShieldCheck, ArrowLeft, Smartphone } from 'lucide-react';
 
 interface CustomerRegisterPageProps {
   onNavigateToLogin: () => void;
@@ -17,6 +18,7 @@ export const CustomerRegisterPage: React.FC<CustomerRegisterPageProps> = ({
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [whatsappPhone, setWhatsappPhone] = useState('+49 170 1234567');
   const [password, setPassword] = useState('');
   const [country, setCountry] = useState('Germany');
   const [city, setCity] = useState('Munich');
@@ -39,8 +41,11 @@ export const CustomerRegisterPage: React.FC<CustomerRegisterPageProps> = ({
     try {
       const res = await signup(name, email, password, 'customer');
       if (res.success) {
-        // Save initial address information
-        updateProfile({
+        // Save initial European address & WhatsApp information
+        await updateProfile({
+          phone: whatsappPhone,
+          whatsapp_number: whatsappPhone,
+          whatsapp_verified: true,
           address: {
             street: 'Maximilianstraße 12',
             city: city || 'Munich',
@@ -48,8 +53,13 @@ export const CustomerRegisterPage: React.FC<CustomerRegisterPageProps> = ({
             zip: '80539',
             country: country || 'Germany',
           },
+          preferences: {
+            whatsapp_order_updates: true,
+            whatsapp_shipping_alerts: true,
+            whatsapp_deals: true,
+          },
         });
-        setSuccessMessage('Account created successfully! Loading your store experience...');
+        setSuccessMessage('Account created successfully with European WhatsApp integration! Loading your store...');
       } else {
         setErrorMessage(res.error || 'Failed to create customer account');
       }
@@ -63,6 +73,7 @@ export const CustomerRegisterPage: React.FC<CustomerRegisterPageProps> = ({
   const fillGermanDemoCustomer = () => {
     setName('Maximilian Weber');
     setEmail('max.weber@example.de');
+    setWhatsappPhone('+49 170 1234567');
     setPassword('securePass123!');
     setCountry('Germany');
     setCity('Munich');
@@ -140,6 +151,22 @@ export const CustomerRegisterPage: React.FC<CustomerRegisterPageProps> = ({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.de"
                 className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">
+              European WhatsApp Phone Number
+            </label>
+            <div className="relative">
+              <Smartphone className="w-4 h-4 text-emerald-600 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="tel"
+                value={whatsappPhone}
+                onChange={(e) => setWhatsappPhone(e.target.value)}
+                placeholder="+49 170 1234567"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 outline-none transition-all font-mono"
               />
             </div>
           </div>

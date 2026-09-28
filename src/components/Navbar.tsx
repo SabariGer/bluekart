@@ -13,6 +13,7 @@ import {
   Moon,
   Heart,
   RotateCcw,
+  Smartphone,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -21,6 +22,7 @@ import { useTheme } from '../context/ThemeContext';
 
 interface NavbarProps {
   onOpenAuth: () => void;
+  onOpenProfile?: () => void;
   onOpenOrders: () => void;
   onOpenTracker: () => void;
   onOpenAdmin: () => void;
@@ -34,6 +36,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
+  onOpenProfile,
   onOpenOrders,
   onOpenTracker,
   onOpenAdmin,
@@ -264,6 +267,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
 
                     <div className="py-1">
+                      {onOpenProfile && (
+                        <button
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            onOpenProfile();
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-semibold flex items-center justify-between cursor-pointer"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>{language === 'de' ? 'Mein Profil & WhatsApp' : 'My Profile & WhatsApp'}</span>
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300">
+                            {user.whatsapp_country_code || 'EU'}
+                          </span>
+                        </button>
+                      )}
+
                       {isAdmin && (
                         <button
                           onClick={() => {
@@ -368,6 +389,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs outline-hidden"
             />
           </div>
+          {onOpenProfile && (
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                onOpenProfile();
+              }}
+              className="w-full text-left py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-2"
+            >
+              <Smartphone className="w-4 h-4" />
+              <span>{language === 'de' ? 'Mein Profil & WhatsApp' : 'My Profile & WhatsApp'}</span>
+            </button>
+          )}
           <button
             onClick={() => {
               setIsMobileMenuOpen(false);
